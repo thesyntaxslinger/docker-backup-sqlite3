@@ -23,7 +23,8 @@ echo -e "Starting script. This will usually hang...\nCheck output in another ter
 # first check for ssh connection
 ssh "$SSH_USER"@"$SSH_HOST" -p "$SSH_PORT" 'exit'
 # get all the files
-ssh "$SSH_USER"@"$SSH_HOST" -p "$SSH_PORT" "find \"$REMOTE_FOLDER\" -type f \\( -iname \"*.db\" -o -iname \"*.sqlite\" -o -iname \"*.db3\" -o -iname \"*.sqlite3\" \\) -exec file -e ascii -e encoding -e tokens -e cdf -e compress -e csv -e elf -e json -e simh -e tar -e text {} \;" > "$_tempfile"
+#ssh "$SSH_USER"@"$SSH_HOST" -p "$SSH_PORT" "find \"$REMOTE_FOLDER\" -type f \( -iname \"*.db\" -o -iname \"*.sqlite\" -o -iname \"*.db3\" -o -iname \"*.sqlite3\" \) -exec file -e ascii -e encoding -e tokens -e cdf -e compress -e csv -e elf -e json -e simh -e tar -e text {} \;" > "$_tempfile"
+ssh "$SSH_USER"@"$SSH_HOST" -p "$SSH_PORT" "find \"$REMOTE_FOLDER\" -type f -exec file -e ascii -e encoding -e tokens -e cdf -e compress -e csv -e elf -e json -e simh -e tar -e text {} \;" > "$_tempfile"
 # sort them if it found any files
 grep 'SQLite 3' "$_tempfile" | awk '{print $1}' | sed -E 's/:$//' > "$_tempfile.2" || true # .2 is what we are doing bc cbf
 if [[ -f "$_tempfile.2" && ! -s "$_tempfile.2" ]]; then
