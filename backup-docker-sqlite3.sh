@@ -4,13 +4,13 @@ set -euo pipefail
 
 # =================== CONFIG ===================
 # REMOTE CONFIG
-DOCKER_LOCATION="/path/to/location"
-SSH_HOST="localhost"
-SSH_PORT="22"
-SSH_USER="root"
+REMOTE_FOLDER="${REMOTE_FOLDER:-/path/to/docker}"
+SSH_HOST="${SSH_HOST:-localhost}"
+SSH_PORT="${SSH_PORT:-22}"
+SSH_USER="${SSH_USER:-root}"
 
 # LOCAL CONFIG
-BACKUP_LOCATION="/path/to/location"
+LOCAL_FOLDER="${LOCAL_FOLDER:-/path/to/location}"
 # =================== CONFIG ===================
 
 _tempfile=$(mktemp)
@@ -23,7 +23,7 @@ echo -e "Starting script. This will usually hang...\nCheck output in another ter
 # first check for ssh connection
 ssh "$SSH_USER"@"$SSH_HOST" -p "$SSH_PORT" 'exit'
 # get all the files
-ssh "$SSH_USER"@"$SSH_HOST" -p "$SSH_PORT" "find \"$DOCKER_LOCATION\" -type f \\( -iname \"*.db\" -o -iname \"*.sqlite\" -o -iname \"*.db3\" -o -iname \"*.sqlite3\" \\) -exec file -e ascii -e encoding -e tokens -e cdf -e compress -e csv -e elf -e json -e simh -e tar -e text {} \;" > "$_tempfile"
+ssh "$SSH_USER"@"$SSH_HOST" -p "$SSH_PORT" "find \"$REMOTE_FOLDER\" -type f \\( -iname \"*.db\" -o -iname \"*.sqlite\" -o -iname \"*.db3\" -o -iname \"*.sqlite3\" \\) -exec file -e ascii -e encoding -e tokens -e cdf -e compress -e csv -e elf -e json -e simh -e tar -e text {} \;" > "$_tempfile"
 # sort them if it found any files
 grep 'SQLite 3' "$_tempfile" | awk '{print $1}' | sed -E 's/:$//' > "$_tempfile.2" || true # .2 is what we are doing bc cbf
 if [[ -f "$_tempfile.2" && ! -s "$_tempfile.2" ]]; then
@@ -33,11 +33,11 @@ echo "============================================================="
 echo -e "\n\n\n\n"
 
 # make new file for rsync
-sed "s|$DOCKER_LOCATION.||g" "$_tempfile.2" > "$_tempfile.3" 
+sed "s|$REMOTE_FOLDER.||g" "$_tempfile.2" > "$_tempfile.3" 
 # do the rsync command with the exclusion
 echo "============================================================="
 echo "Starting rsync command with exclusions for sqlite3."
-rsync -avz --delete --exclude "*-wal" --exclude="*-shm" --exclude-from="$_tempfile.3" -e "ssh -p \"$SSH_PORT\"" "$SSH_USER"@"$SSH_HOST":"$DOCKER_LOCATION"/ "$BACKUP_LOCATION"/
+rsync -avz --delete --exclude "*-wal" --exclude="*-shm" --exclude-from="$_tempfile.3" -e "ssh -p \"$SSH_PORT\"" "$SSH_USER"@"$SSH_HOST":"$REMOTE_FOLDER"/ "$LOCAL_FOLDER"/
 echo "============================================================="
 
 # backup sql
@@ -54,7 +54,7 @@ while IFS= read -r _file; do
   ssh -n "$SSH_USER"@"$SSH_HOST" -p "$SSH_PORT" "
     sqlite3 \"$_file\" \".backup $_file.backup\" 
   "
-  _localfile=$(echo "$_file" | sed "s|$DOCKER_LOCATION|$BACKUP_LOCATION|g")
+  _localfile=$(echo "$_file" | sed "s|$REMOTE_FOLDER|$LOCAL_FOLDER|g")
   rsync -az --delete -e "ssh -p \"$SSH_PORT\"" "$SSH_USER"@"$SSH_HOST":"$_file.backup" "$_localfile"
   ssh -n "$SSH_USER"@"$SSH_HOST" -p "$SSH_PORT" "rm \"$_file.backup\""
   echo "$_file > $_localfile"
