@@ -20,6 +20,8 @@ chmod 0600 "$_tempfile.2" "$_tempfile.3"
 echo "============================================================="
 echo -e "Starting script. This will usually hang...\nCheck output in another terminal window on remote with 'htop' + tab button.\nLook for find command."
 
+# first check for ssh connection
+ssh "$SSH_USER"@"$SSH_HOST" -p "$SSH_PORT" 'exit'
 # get all the files
 ssh "$SSH_USER"@"$SSH_HOST" -p "$SSH_PORT" "find \"$DOCKER_LOCATION\" -type f -exec file -e ascii -e encoding -e tokens -e cdf -e compress -e csv -e elf -e json -e simh -e tar -e text {} \;" > "$_tempfile"
 # sort them if it found any files
